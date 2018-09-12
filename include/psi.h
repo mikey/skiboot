@@ -88,6 +88,8 @@
 #define PSIHB_PHBSCR			0x90
 #define   PSIHB_PHBSCR_TCE_ENABLE	PPC_BIT(2)
 
+/* XXX P10 */
+
 /* P9 registers */
 
 #define PSIHB_INTERRUPT_CONTROL		0x58

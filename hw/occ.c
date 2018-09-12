@@ -27,6 +27,8 @@
 
 /* OCC Communication Area for PStates */
 
+/* XXX P10 */
+
 #define P8_HOMER_OPAL_DATA_OFFSET	0x1F8000
 #define P9_HOMER_OPAL_DATA_OFFSET	0x0E2000
 
@@ -42,6 +44,7 @@
 
 #define P8_PIR_CORE_MASK		0xFFF8
 #define P9_PIR_QUAD_MASK		0xFFF0
+#define P10_PIR_CHIP_MASK		0x0000
 #define FREQ_MAX_IN_DOMAIN		0
 #define FREQ_MOST_RECENTLY_SET		1
 
@@ -530,7 +533,7 @@ static bool add_cpu_pstate_properties(struct dt_node *power_mgt,
 	/* Parse Pmax, Pmin and Pnominal */
 	switch (major) {
 	case 0:
-		if (proc_gen == proc_gen_p9) {
+		if (proc_gen >= proc_gen_p9) {
 			/**
 			 * @fwts-label OCCInvalidVersion02
 			 * @fwts-advice The PState table layout version is not
@@ -771,7 +774,7 @@ static bool cpu_pstates_prepare_core(struct proc_chip *chip,
 	 *
 	 * Use the OR SCOM to set the required bits in PM_GP1 register
 	 * since the OCC might be mainpulating the PM_GP1 register as well.
-	 */ 
+	 */
 	rc = xscom_write(chip->id, XSCOM_ADDR_P8_EX_SLAVE(core, EX_PM_SET_GP1),
 			 EX_PM_SETUP_GP1_PM_SPR_OVERRIDE_EN);
 	if (rc) {
@@ -1766,6 +1769,7 @@ void occ_pstates_init(void)
 	case proc_gen_p9:
 		homer_opal_data_offset = P9_HOMER_OPAL_DATA_OFFSET;
 		break;
+	case proc_gen_p10: /* XXX P10 */
 	default:
 		return;
 	}
@@ -1826,6 +1830,12 @@ void occ_pstates_init(void)
 	} else if (proc_gen == proc_gen_p9) {
 		freq_domain_mask = P9_PIR_QUAD_MASK;
 		domain_runs_at = FREQ_MAX_IN_DOMAIN;
+	} else if (proc_gen == proc_gen_p10) {
+		/* XXX P10 */
+		freq_domain_mask = P10_PIR_CHIP_MASK;
+		domain_runs_at = FREQ_MAX_IN_DOMAIN;
+	} else {
+		assert(0);
 	}
 
 	dt_add_property_cells(power_mgt, "freq-domain-mask", freq_domain_mask);
@@ -1995,6 +2005,7 @@ void occ_send_dummy_interrupt(void)
 			    OCB_OCI_OCIMISC_IRQ |
 			    OCB_OCI_OCIMISC_IRQ_OPAL_DUMMY);
 		break;
+	case proc_gen_p10: /* XXX P10 */
 	default:
 		break;
 	}

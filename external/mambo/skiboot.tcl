@@ -142,6 +142,17 @@ if { $default_config == "P9" } {
     }
 }
 
+if { $default_config == "P10" } {
+    # PVR configured for POWER10 DD1.0
+    myconf config processor/initial/PVR 0x800100
+    myconf config processor/initial/SIM_CTRL1 0xc228100400000000
+
+    if { $mconf(numa) } {
+        myconf config memory_region_id_shift 44
+    }
+}
+
+
 if { $mconf(numa) } {
     myconf config memory_regions $mconf(cpus)
 }
@@ -388,8 +399,8 @@ mysim of addprop $fake_nvram_node empty "name" "ibm,fake-nvram"
 
 set opal_node [mysim of addchild $root_node "ibm,opal" ""]
 
-# Allow P9 to use all idle states
-if { $default_config == "P9" } {
+# Allow P9/P10 to use all idle states
+if { $default_config == "P9" || $default_config == "P10" } {
     set power_mgt_node [mysim of addchild $opal_node "power-mgt" ""]
     mysim of addprop $power_mgt_node int "ibm,enabled-stop-levels" 0xffffffff
 }
@@ -459,7 +470,7 @@ for { set c 0 } { $c < $mconf(cpus) } { incr c } {
     lappend reg 0x22 0x120 1 0x22 0x0003 ;# 16G seg 16G pages
     mysim of addprop $cpu_node array "ibm,segment-page-sizes" reg
 
-    if { $default_config == "P9" } {
+    if { $default_config == "P9" || $default_config == "P10" } {
         # Set actual page size encodings
         set reg {}
         # 4K pages
@@ -512,6 +523,7 @@ for { set c 0 } { $c < $mconf(cpus) } { incr c } {
 }
 
 #Add In-Memory Collection Counter nodes
+#XXX P10
 if { $default_config == "P9" } {
    #Add the base node "imc-counters"
    set imc_c [mysim of addchild $root_node "imc-counters" ""]

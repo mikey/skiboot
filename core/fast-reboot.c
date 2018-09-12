@@ -318,7 +318,7 @@ void __noreturn fast_reboot_entry(void)
 {
 	prlog(PR_DEBUG, "RESET: CPU 0x%04x reset in\n", this_cpu()->pir);
 
-	if (proc_gen == proc_gen_p9) {
+	if (proc_gen >= proc_gen_p9) {
 		xive_cpu_reset();
 	} else if (proc_gen == proc_gen_p8) {
 		/* We reset our ICP first ! Otherwise we might get stray
@@ -362,7 +362,7 @@ void __noreturn fast_reboot_entry(void)
 	 */
 	cpu_state_wait_all_others(cpu_state_present, 0);
 
-	if (proc_gen == proc_gen_p9)
+	if (proc_gen >= proc_gen_p9)
 		xive_reset();
 
 	prlog(PR_INFO, "RESET: Releasing secondaries...\n");

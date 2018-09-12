@@ -15,6 +15,7 @@
 #include <xscom.h>
 #include <xscom-p8-regs.h>
 #include <xscom-p9-regs.h>
+#include <xscom-p10-regs.h>
 #include <pci.h>
 #include <cpu.h>
 #include <chip.h>
@@ -147,6 +148,75 @@
  * NOTE: Per Dave Larson, never enable 8,9,21-23
  */
 
+/*
+ * P10 HMER register layout:
+ * Bit   Name                Description
+ * 0     malfunction_allert  A processor core in the system has checkstopped
+ *                           (failed recovery) and has requested a CP Sparing
+ *                           to occur. This is broadcasted to every processor
+ *                           in the system
+ *
+ * 1     qme_request         qme request for a hmi
+ *
+ * 2     proc_recv_done      Processor recovery occurred error-bit in fir not
+ *                           masked (see bit 11)
+ *
+ * 3     reserved            reserved
+ *
+ * 4     tfac_error          Timer facility experienced an error. TB, DEC,
+ *                           HDEC, PURR or SPURR may be corrupted (details in
+ *                           TFMR)
+ *
+ * 5-7   reserved            reserved
+ *
+ * 8     xscom_fail          An XSCOM operation caused by a cache inhibited
+ *                           load/store from this thread failed. A trap
+ *                           register is available.
+ *
+ * 9     xscom_done          An XSCOM operation caused by a cache inhibited
+ *                           load/store from this thread completed. If
+ *                           hypervisor intends to use this bit, it is
+ *                           responsible for clearing it before performing the
+ *                           xscom operation. NOTE: this bit should always be
+ *                           masked in HMEER
+ *
+ * 10    reserved            reserved
+ *
+ * 11    proc_recv_again     Processor recovery occurred again before bit 2 or
+ *                           bit 3 was cleared
+ *
+ * 12-15 reserved            reserved
+ *
+ * 16    scom_fir_hmi        SCOM has set a reserved FIR bit to cause recovery
+ *                           (fir bit 61)
+ *
+ * 17    thd_wake_blocked_tm_suspend  Tries to wake up a thread when any
+ *                                    threads were in TM Suspend mode
+ *
+ * 18    trig_fir_hmi        Debug trigger has set a reserved FIR bit to cause
+ *                           recovery (fir bit 60)
+ *
+ * 19-20 reserved            reserved
+ *
+ * 21-23 xscom_status        if bit 8 is active, the reason will be detailed in
+ *                           these bits. see chapter 11.1 This bits are
+ *                           information only and always masked ( mask = ‘0’)
+ *                           If hypervisor intends to use this bit, it is
+ *                           responsible for clearing it before performing the
+ *                           xscom operation.
+ *
+ * 24:63 Not implemented     Not implemented.
+ *
+ * P10 HMEER enabled bits:
+ * Name                      Action
+ * malfunction_allert        Decode and log FIR bits.
+ * qme_request               Log and continue XXX? Read QME FIR?
+ * proc_recv_done            Log and continue.
+ * tfac_error                Log and attempt to recover time facilities.
+ * proc_recv_again           Log and continue.
+ * thd_wake_blocked_tm_suspend Log and continue. XXX?
+ */
+
 /* Used for tracking cpu threads inside hmi handling. */
 #define HMI_STATE_CLEANUP_DONE	0x100
 #define CORE_THREAD_MASK	0x0ff
@@ -203,10 +273,12 @@ static const struct core_xstop_bit_info {
 	{ 63, CORE_CHECKSTOP_PC_SPRD_HYP_ERR_INJ },
 };
 
-static const struct core_recoverable_bit_info {
+struct core_fir_bit_info {
 	uint8_t bit;		/* CORE FIR bit number */
 	const char *reason;
-} recoverable_bits[] = {
+};
+
+static const struct core_fir_bit_info p9_recoverable_bits[] = {
 	{ 0, "IFU - SRAM (ICACHE parity, etc)" },
 	{ 2, "IFU - RegFile" },
 	{ 4, "IFU - Logic" },
@@ -224,6 +296,61 @@ static const struct core_recoverable_bit_info {
 	{ 37, "LSU - Logic" },
 	{ 39, "LSU - Recoverable due to not in MT window" },
 	{ 43, "PC - Thread hang recovery" },
+};
+
+static const struct core_fir_bit_info p10_core_fir_bits[] = {
+	{ 0,  "IFU - SRAM recoverable error (ICACHE parity error, etc.)" },
+	{ 1,  "PC - TC checkstop" },
+	{ 2,  "IFU - RegFile recoverable error" },
+	{ 3,  "IFU - RegFile core checkstop" },
+	{ 4,  "IFU - Logic recoverable error" },
+	{ 5,  "IFU - Logic core checkstop" },
+	{ 7,  "VSU - Inference accumulator recoverable error" },
+	{ 8,  "PC - Recovery core checkstop" },
+	{ 9,  "VSU - Slice Targeted File (STF) recoverable error" },
+	{ 11, "ISU - Logic recoverable error" },
+	{ 12, "ISU - Logic core checkstop" },
+	{ 13, "ISU - Recoverable if not in MT window" },
+	{ 14, "ISU - MCHK received while ME=0; non recoverable" },
+	{ 15, "ISU - UE from L2" },
+	{ 16, "ISU - Number of UEs from L2 above threshold" },
+	{ 17, "ISU - UE on CI load" },
+	{ 18, "MMU - SRAM recoverable error" },
+	{ 21, "MMU - Logic recoverable error" },
+	{ 22, "MMU - Logic core checkstop" },
+	{ 23, "MMU - MMU system checkstop" },
+	{ 24, "VSU - Logic recoverable error" },
+	{ 25, "VSU - Logic core checkstop" },
+	{ 26, "PC - In maint mode and recovery in progress" },
+	{ 27, "VSU - VSU DFU logic recoverable error" },
+	{ 28, "PC - PC system checkstop" },
+	{ 29, "LSU - SRAM recoverable error (DCACHE parity error, etc.)" },
+	{ 30, "LSU - Set deleted" },
+	{ 31, "LSU - RegFile recoverable error" },
+	{ 32, "LSU - RegFile core checkstop" },
+	{ 33, "MMU - TLB multi hit error occurred" },
+	{ 34, "MMU - SLB multi hit error occurred" },
+	{ 35, "LSU - ERAT multi hit error occurred" },
+	{ 36, "PC - Forward progress error" },
+	{ 37, "LSU - Logic recoverable error" },
+	{ 38, "LSU - Logic core checkstop" },
+	{ 39, "LSU - Recoverable if not in MT window" },
+	{ 41, "LSU - System checkstop" },
+	{ 43, "PC - Thread hang recoverable error" },
+	{ 45, "PC - Logic core checkstop" },
+	{ 47, "PC - TimeBase facility checkstop" },
+	{ 48, "PC - Hypervisor resource error core checkstop" },
+	{ 52, "PC - Hang recovery failed core checkstop" },
+	{ 53, "PC - Core internal hang detected" },
+	{ 55, "PC - Nest hang detected" },
+	{ 56, "PC - Other core chiplet recoverable error" },
+	{ 57, "PC - Other core chiplet core checkstop" },
+	{ 58, "PC - Other core chiplet system checkstop" },
+	{ 59, "PC - SCOM satellite error detected" },
+	{ 60, "PC - Debug trigger error inject" },
+	{ 61, "PC - SCOM or firmware recoverable error inject" },
+	{ 62, "PC - SCOM or firmware checkstop error inject" },
+	{ 63, "PC - SPRC / SPRD checkstop" },
 };
 
 static const struct nx_xstop_bit_info {
@@ -270,6 +397,7 @@ static int setup_scom_addresses(void)
 		nx_dma_engine_fir = P9_NX_DMA_ENGINE_FIR;
 		nx_pbi_fir = P9_NX_PBI_FIR;
 		return 1;
+	/* XXX P10 */
 	default:
 		prerror("%s: Unknown CPU type\n", __func__);
 		break;
@@ -320,6 +448,10 @@ static int read_core_fir(uint32_t chip_id, uint32_t core_id, uint64_t *core_fir)
 		rc = xscom_read(chip_id,
 			XSCOM_ADDR_P9_EC(core_id, P9_CORE_FIR), core_fir);
 		break;
+	case proc_gen_p10:
+		rc = xscom_read(chip_id,
+			XSCOM_ADDR_P10_EC(core_id, P10_CORE_FIR), core_fir);
+		break;
 	default:
 		rc = OPAL_HARDWARE;
 	}
@@ -334,6 +466,10 @@ static int read_core_wof(uint32_t chip_id, uint32_t core_id, uint64_t *core_wof)
 	case proc_gen_p9:
 		rc = xscom_read(chip_id,
 			XSCOM_ADDR_P9_EC(core_id, P9_CORE_WOF), core_wof);
+		break;
+	case proc_gen_p10:
+		rc = xscom_read(chip_id,
+			XSCOM_ADDR_P10_EC(core_id, P10_CORE_WOF), core_wof);
 		break;
 	default:
 		rc = OPAL_HARDWARE;
@@ -393,6 +529,13 @@ static bool decode_core_fir(struct cpu_thread *cpu,
 	prlog(PR_INFO, "[Loc: %s]: CHIP ID: %x, CORE ID: %x, FIR: %016llx\n",
 			loc ? loc : "Not Available",
 			cpu->chip_id, core_id, core_fir);
+
+	if (proc_gen == proc_gen_p10) {
+		for (i = 0; i < ARRAY_SIZE(p10_core_fir_bits); i++) {
+			if (core_fir & PPC_BIT(p10_core_fir_bits[i].bit))
+				prlog(PR_INFO, "    %s\n", p10_core_fir_bits[i].reason);
+		}
+	}
 
 	/* Check CORE FIR bits and populate HMI event with error info. */
 	for (i = 0; i < ARRAY_SIZE(xstop_bits); i++) {
@@ -787,6 +930,9 @@ static void decode_malfunction(struct OpalHMIEvent *hmi_evt, uint64_t *out_flags
 
 	flags = 0;
 
+	if (proc_gen == proc_gen_p10) /* XXX P10 */
+		goto core_xstop;
+
 	if (!setup_scom_addresses()) {
 		prerror("Failed to setup scom addresses\n");
 		/* Send an unknown HMI event. */
@@ -811,6 +957,7 @@ static void decode_malfunction(struct OpalHMIEvent *hmi_evt, uint64_t *out_flags
 		}
 	}
 
+core_xstop:
 	find_core_checkstop_reason(hmi_evt, &flags);
 
 	/*
@@ -1231,10 +1378,16 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 			int i;
 
 			prlog(PR_DEBUG, "Core WOF = 0x%016llx recovered error:\n", core_wof);
-			for (i = 0; i < ARRAY_SIZE(recoverable_bits); i++) {
-				if (core_wof & PPC_BIT(recoverable_bits[i].bit))
-					prlog(PR_DEBUG, "%s\n",
-						recoverable_bits[i].reason);
+			if (proc_gen <= proc_gen_p9) {
+				for (i = 0; i < ARRAY_SIZE(p9_recoverable_bits); i++) {
+					if (core_wof & PPC_BIT(p9_recoverable_bits[i].bit))
+						prlog(PR_DEBUG, "    %s\n", p9_recoverable_bits[i].reason);
+				}
+			} else if (proc_gen == proc_gen_p10) {
+				for (i = 0; i < ARRAY_SIZE(p10_core_fir_bits); i++) {
+					if (core_wof & PPC_BIT(p10_core_fir_bits[i].bit))
+						prlog(PR_DEBUG, "    %s\n", p10_core_fir_bits[i].reason);
+				}
 			}
 		}
 
@@ -1245,6 +1398,7 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 			queue_hmi_event(hmi_evt, recover, out_flags);
 		}
 	}
+
 	if (hmer & SPR_HMER_PROC_RECV_ERROR_MASKED) {
 		handled |= SPR_HMER_PROC_RECV_ERROR_MASKED;
 		if (cpu_is_thread0(cpu) && hmi_evt) {
@@ -1254,6 +1408,7 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 		}
 		hmi_print_debug("Processor recovery Done (masked).", hmer);
 	}
+
 	if (hmer & SPR_HMER_PROC_RECV_AGAIN) {
 		handled |= SPR_HMER_PROC_RECV_AGAIN;
 		if (cpu_is_thread0(cpu) && hmi_evt) {
@@ -1264,11 +1419,24 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 		hmi_print_debug("Processor recovery occurred again before"
 				"bit2 was cleared\n", hmer);
 	}
+
+	/* XXX: what to do with this? */
+	if (hmer & SPR_HMER_QME_REQUEST) {
+		handled |= SPR_HMER_QME_REQUEST;
+		if (cpu_is_thread0(cpu) && hmi_evt) {
+			hmi_evt->severity = OpalHMI_SEV_NO_ERROR;
+			hmi_evt->type = OpalHMI_ERROR_PROC_RECOV_DONE; // XXX
+			queue_hmi_event(hmi_evt, recover, out_flags);
+		}
+		hmi_print_debug("QME requested HMI.", hmer);
+	}
+
 	/* Assert if we see malfunction alert, we can not continue. */
 	if (hmer & SPR_HMER_MALFUNCTION_ALERT) {
 		handled |= SPR_HMER_MALFUNCTION_ALERT;
 
 		hmi_print_debug("Malfunction Alert", hmer);
+		recover = 0;
 		if (hmi_evt)
 			decode_malfunction(hmi_evt, out_flags);
 	}
@@ -1285,9 +1453,34 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 			queue_hmi_event(hmi_evt, recover, out_flags);
 		}
 	}
-	if (hmer & SPR_HMER_TRIG_FIR_HMI) {
+
+	/* XXX: what to do with this? */
+	if ((proc_gen == proc_gen_p10) && (hmer & SPR_HMER_THD_WAKE_BLOCKED_TM_SUSPEND)) {
+		handled |= SPR_HMER_THD_WAKE_BLOCKED_TM_SUSPEND;
+		hmer &= ~SPR_HMER_THD_WAKE_BLOCKED_TM_SUSPEND;
+
+		hmi_print_debug("Attempted to wake thread when threads in TM suspend mode.", hmer);
+		if (hmi_evt) {
+			hmi_evt->severity = OpalHMI_SEV_NO_ERROR;
+			hmi_evt->type = OpalHMI_ERROR_PROC_RECOV_DONE,
+				queue_hmi_event(hmi_evt, recover, out_flags);
+		}
+	}
+
+	if ((proc_gen < proc_gen_p10) && (hmer & SPR_HMER_TRIG_FIR_HMI)) {
 		handled |= SPR_HMER_TRIG_FIR_HMI;
 		hmer &= ~SPR_HMER_TRIG_FIR_HMI;
+
+		hmi_print_debug("Clearing unknown debug trigger", hmer);
+		if (hmi_evt) {
+			hmi_evt->severity = OpalHMI_SEV_NO_ERROR;
+			hmi_evt->type = OpalHMI_ERROR_DEBUG_TRIG_FIR,
+				queue_hmi_event(hmi_evt, recover, out_flags);
+		}
+	}
+	if ((proc_gen == proc_gen_p10) && (hmer & SPR_HMER_P10_TRIG_FIR_HMI)) {
+		handled |= SPR_HMER_P10_TRIG_FIR_HMI;
+		hmer &= ~SPR_HMER_P10_TRIG_FIR_HMI;
 
 		hmi_print_debug("Clearing unknown debug trigger", hmer);
 		if (hmi_evt) {

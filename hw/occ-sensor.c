@@ -499,8 +499,9 @@ bool occ_sensors_init(void)
 	int occ_num = 0, i;
 	bool has_gpu = false;
 
-	/* OCC inband sensors is only supported in P9 */
-	if (proc_gen != proc_gen_p9)
+	/* OCC inband sensors is only supported in P9/10 */
+	/* XXX P10 */
+	if (proc_gen < proc_gen_p9)
 		return false;
 
 	/* Sensors are copied to BAR2 OCC Common Area */

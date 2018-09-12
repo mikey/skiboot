@@ -53,6 +53,7 @@ static void print_chip_info(uint32_t chip_id)
 	case 0xd4:
 		name = "P9 (Cumulus) processor";
 		break;
+	/* XXX P10, P9P */
 	case 0xe9:
 		name = "Centaur memory buffer";
 		break;

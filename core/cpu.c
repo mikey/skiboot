@@ -100,7 +100,7 @@ static void cpu_wake(struct cpu_thread *cpu)
 	if (proc_gen == proc_gen_p8) {
 		/* Poke IPI */
 		icp_kick_cpu(cpu);
-	} else if (proc_gen == proc_gen_p9) {
+	} else if (proc_gen == proc_gen_p9 || proc_gen == proc_gen_p10) {
 		p9_dbell_send(cpu->pir);
 	}
 }
@@ -507,6 +507,9 @@ static void cpu_idle_pm(enum cpu_wake_cause wake_on)
 	case proc_gen_p9:
 		vec = cpu_idle_p9(wake_on);
 		break;
+	case proc_gen_p10:
+		vec = cpu_idle_p9(wake_on);
+		break;
 	default:
 		vec = 0;
 		prlog_once(PR_DEBUG, "cpu_idle_pm called with bad processor type\n");
@@ -604,7 +607,7 @@ static void cpu_pm_disable(void)
 				cpu_relax();
 			}
 		}
-	} else if (proc_gen == proc_gen_p9) {
+	} else if (proc_gen == proc_gen_p9 || proc_gen == proc_gen_p10) {
 		for_each_available_cpu(cpu) {
 			if (cpu->in_sleep || cpu->in_idle)
 				p9_dbell_send(cpu->pir);
@@ -639,7 +642,7 @@ void cpu_set_sreset_enable(bool enabled)
 				pm_enabled = true;
 		}
 
-	} else if (proc_gen == proc_gen_p9) {
+	} else if (proc_gen == proc_gen_p9 || proc_gen == proc_gen_p10) {
 		sreset_enabled = enabled;
 		sync();
 		/*
@@ -667,7 +670,7 @@ void cpu_set_ipi_enable(bool enabled)
 				pm_enabled = true;
 		}
 
-	} else if (proc_gen == proc_gen_p9) {
+	} else if (proc_gen == proc_gen_p9 || proc_gen == proc_gen_p10) {
 		ipi_enabled = enabled;
 		sync();
 		if (!enabled)
@@ -1004,6 +1007,13 @@ void init_boot_cpu(void)
 		hid0_hile = SPR_HID0_POWER9_HILE;
 		hid0_attn = SPR_HID0_POWER9_ENABLE_ATTN;
 		break;
+	case PVR_TYPE_P10:
+		proc_gen = proc_gen_p10;
+		hile_supported = true;
+		radix_supported = true;
+		hid0_hile = SPR_HID0_POWER10_HILE;
+		hid0_attn = SPR_HID0_POWER10_ENABLE_ATTN;
+		break;
 	default:
 		proc_gen = proc_gen_unknown;
 	}
@@ -1018,6 +1028,11 @@ void init_boot_cpu(void)
 	case proc_gen_p9:
 		cpu_thread_count = 4;
 		prlog(PR_INFO, "CPU: P9 generation processor"
+		      " (max %d threads/core)\n", cpu_thread_count);
+		break;
+	case proc_gen_p10:
+		cpu_thread_count = 4;
+		prlog(PR_INFO, "CPU: P10 generation processor"
 		      " (max %d threads/core)\n", cpu_thread_count);
 		break;
 	default:

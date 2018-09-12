@@ -266,8 +266,9 @@ static void astbmc_fixup_dt_mbox(struct dt_node *lpc)
 	 * can indicate they support mbox using the scratch register, or ipmi
 	 * by configuring the hiomap ipmi command. If neither are configured
 	 * for P8 then skiboot will drive the flash controller directly.
+	 * XXX P10
 	 */
-	if (proc_gen != proc_gen_p9 && !ast_scratch_reg_is_mbox())
+	if (proc_gen == proc_gen_p8 && !ast_scratch_reg_is_mbox())
 		return;
 
 	/* First check if the mbox interface is already there */
@@ -478,7 +479,7 @@ void astbmc_early_init(void)
 		 * never MBOX. Thus only populate the MBOX node on P9 to allow
 		 * fallback.
 		 */
-		if (proc_gen == proc_gen_p9) {
+		if (proc_gen >= proc_gen_p9) {
 			astbmc_fixup_dt_mbox(dt_find_primary_lpc());
 			ast_setup_sio_mbox(MBOX_IO_BASE, MBOX_LPC_IRQ);
 		}

@@ -59,11 +59,13 @@ unsigned long tb_hz = 512000000;
 #define PVR_TYPE_P8NVL	0x004c
 #define PVR_TYPE_P9	0x004e
 #define PVR_TYPE_P9P	0x004f
+#define PVR_TYPE_P10	0x0080
 #define PVR_P8E		0x004b0201
 #define PVR_P8		0x004d0200
 #define PVR_P8NVL	0x004c0100
 #define PVR_P9		0x004e0200
 #define PVR_P9P		0x004f0100
+#define PVR_P10		0x00800100
 
 #define SPR_PVR		0x11f	/* RO: Processor version register */
 
@@ -320,6 +322,10 @@ int main(int argc, char *argv[])
 		} else if (strcmp(argv[i], "-9P") == 0) {
 			fake_pvr = PVR_P9P;
 			proc_gen = proc_gen_p9;
+			opt_count++;
+		} else if (strcmp(argv[i], "-10") == 0) {
+			fake_pvr = PVR_P10;
+			proc_gen = proc_gen_p10;
 			opt_count++;
 		}
 	}

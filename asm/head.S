@@ -345,6 +345,8 @@ boot_entry:
 	beq 	1f
 	cmpwi	cr0,%r3,PVR_TYPE_P9P
 	beq 	1f
+	cmpwi	cr0,%r3,PVR_TYPE_P10
+	beq 	1f
 	attn		/* Unsupported CPU type... what do we do ? */
 	b 	.	/* loop here, just in case attn is disabled */
 
@@ -699,6 +701,8 @@ init_shared_sprs:
 	beq	4f
 	cmpwi	cr0,%r3,PVR_TYPE_P9P
 	beq	4f
+	cmpwi	cr0,%r3,PVR_TYPE_P10
+	beq	5f
 	/* Unsupported CPU type... what do we do ? */
 	b	9f
 
@@ -775,6 +779,34 @@ init_shared_sprs:
 
 	LOAD_IMM64(%r3,0x00000103070F1F3F)
 	mtspr	SPR_RPR,%r3
+
+5:	/* P10 */
+	/* XXX P10 */
+	/* TSCR: Recommended value by HW folks */
+	LOAD_IMM32(%r3,0x80287880)
+	mtspr	SPR_TSCR, %r3
+	/* HID0: Clear bit 5 (enable core recovery)
+	 *       Clear bit 4 (HILE)
+	 *       Set bit 8 (radix) XXX P10 this is gone?
+	 */
+	mfspr	%r3,SPR_HID0
+	LOAD_IMM64(%r4,0x0c00000000000000)
+	andc	%r3,%r3,%r4
+	LOAD_IMM64(%r4,0x0080000000000000)
+	or	%r3,%r3,%r4
+	sync
+	mtspr	SPR_HID0,%r3
+	isync
+	LOAD_IMM64(%r4,SPR_HMEER_P10_HMI_ENABLE_MASK)
+	mfspr	%r3,SPR_HMEER
+	or	%r3,%r3,%r4
+	sync
+	mtspr	SPR_HMEER,%r3
+	isync
+
+	LOAD_IMM64(%r3,0x00000103070F1F3F)
+	mtspr	SPR_RPR,%r3
+
 9:	blr
 
 .global init_replicated_sprs
@@ -791,6 +823,8 @@ init_replicated_sprs:
 	beq	4f
 	cmpwi	cr0,%r3,PVR_TYPE_P9P
 	beq	4f
+	cmpwi	cr0,%r3,PVR_TYPE_P10
+	beq	5f
 	/* Unsupported CPU type... what do we do ? */
 	b	9f
 
@@ -805,6 +839,17 @@ init_replicated_sprs:
 	b	9f
 
 4:	/* P9 */
+	/* LPCR: sane value */
+	LOAD_IMM64(%r3,0x0040000000000000)
+	mtspr	SPR_LPCR, %r3
+	sync
+	isync
+	/* DSCR: Stride-N Stream Enable */
+	LOAD_IMM64(%r3,0x0000000000000010)
+	mtspr	SPR_DSCR,%r3
+
+5:	/* P10 */
+	/* XXX P10 */
 	/* LPCR: sane value */
 	LOAD_IMM64(%r3,0x0040000000000000)
 	mtspr	SPR_LPCR, %r3

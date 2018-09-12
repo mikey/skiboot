@@ -266,7 +266,10 @@ static void psi_spurious_fsp_irq(struct psi *psi)
 
 	prerror("PSI: Spurious interrupt, attempting clear\n");
 
-	if (proc_gen == proc_gen_p9) {
+	if (proc_gen == proc_gen_p10) {
+		/* XXX P10 */
+		return;
+	} else if (proc_gen == proc_gen_p9) {
 		reg = PSIHB_XSCOM_P9_HBCSR_CLR;
 		bit = PSIHB_XSCOM_P9_HBSCR_FSP_IRQ;
 	} else if (proc_gen == proc_gen_p8) {
@@ -734,6 +737,7 @@ static void psi_init_interrupts(struct psi *psi)
 	case proc_gen_p9:
 		psi_init_p9_interrupts(psi);
 		break;
+	case proc_gen_p10:
 	default:
 		/* Unknown: just no interrupts */
 		prerror("PSI: Unknown interrupt type\n");
@@ -817,6 +821,7 @@ static void psi_create_mm_dtnode(struct psi *psi)
 					"ibm,power9-psi");
 		psi_create_p9_int_map(psi, np);
 		break;
+	case proc_gen_p10:
 	default:
 		assert(0);
 		break;
@@ -951,5 +956,3 @@ void psi_init(void)
 	dt_for_each_compatible(dt_root, np, "ibm,psihb-x")
 		psi_init_psihb(np);
 }
-
-

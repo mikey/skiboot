@@ -71,6 +71,23 @@
 #define P9_PIR2LOCALCPU(pir) ((pir) & 0xff)
 #define P9_PIRFROMLOCALCPU(chip, cpu)	(((chip) << 8) | (cpu))
 
+/*
+ * P10 same as P9 for now
+ * XXX P10
+ */
+#define P10_PIR2GCID(pir) (((pir) >> 8) & 0x7f)
+
+#define P10_PIR2COREID(pir) (((pir) >> 2) & 0x3f)
+
+#define P10_PIR2THREADID(pir) ((pir) & 0x3)
+
+#define P10_GCID2NODEID(gcid)	(((gcid) >> 3) & 0xf)
+
+#define P10_GCID2CHIPID(gcid) ((gcid) & 0x7)
+
+/* P10 specific ones mostly used by XIVE */
+#define P10_PIR2LOCALCPU(pir) ((pir) & 0xff)
+#define P10_PIRFROMLOCALCPU(chip, cpu)	(((chip) << 8) | (cpu))
 
 struct dt_node;
 struct centaur_chip;
@@ -90,6 +107,7 @@ enum proc_chip_type {
 	PROC_CHIP_P9_NIMBUS,
 	PROC_CHIP_P9_CUMULUS,
 	PROC_CHIP_P9P,
+	PROC_CHIP_P10,
 };
 
 /* Simulator quirks */

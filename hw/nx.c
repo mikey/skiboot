@@ -59,7 +59,7 @@ void nx_p9_rng_late_init(void)
 	struct cpu_thread *c;
 	uint64_t rc;
 
-	if (proc_gen != proc_gen_p9)
+	if (proc_gen < proc_gen_p9)
 		return;
 	if (chip_quirk(QUIRK_NO_RNG))
 		return;
@@ -118,6 +118,7 @@ void nx_init(void)
 		nx_init_one(node);
 	}
 
-	if (proc_gen == proc_gen_p9)
+	/* XXX P10 */
+	if (proc_gen >= proc_gen_p9)
 		p9_darn_init();
 }

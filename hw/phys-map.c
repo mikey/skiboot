@@ -328,6 +328,7 @@ void phys_map_init(unsigned long pvr)
 
 	phys_map = NULL;
 
+	/* XXX P10 */
 	if (proc_gen == proc_gen_p9) {
 		switch(PVR_TYPE(pvr)) {
 		case PVR_TYPE_P9P:

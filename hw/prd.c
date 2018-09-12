@@ -724,6 +724,8 @@ void prd_init(void)
 		prd_ipoll_status_reg = PRD_P9_IPOLL_REG_STATUS;
 		prd_ipoll_mask = PRD_P9_IPOLL_MASK;
 		break;
+	case proc_gen_p10:
+		return; /* XXX P10 */
 	default:
 		assert(0);
 	}

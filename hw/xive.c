@@ -341,10 +341,17 @@ static inline void log_print(struct xive_cpu_state *xs __unused) { }
 
 #endif /* XIVE_PERCPU_LOG */
 
+enum xive_generation {
+	XIVE_GEN_1 = 1,
+	XIVE_GEN_2 = 2,
+};
+
 struct xive {
 	uint32_t	chip_id;
 	uint32_t	block_id;
 	struct dt_node	*x_node;
+
+	enum xive_generation generation;
 
 	uint64_t	xscom_base;
 
@@ -2580,12 +2587,17 @@ static struct xive *init_one_xive(struct dt_node *np)
 		/* Fallthrough */
 	case PROC_CHIP_P9_CUMULUS:
 	case PROC_CHIP_P9P:
+		x->generation = XIVE_GEN_1;
+		break;
+	case PROC_CHIP_P10:
+		x->generation = XIVE_GEN_2;
 		break;
 	default:
 		assert(0);
 	}
 
-	xive_dbg(x, "Initializing block ID %d...\n", x->block_id);
+	xive_dbg(x, "Initializing XIVE Gen %d, block ID %d...\n",
+			x->generation, x->block_id);
 	chip->xive = x;
 
 	list_head_init(&x->donated_pages);
@@ -5171,4 +5183,3 @@ void init_xive(void)
 	opal_register(OPAL_XIVE_SET_QUEUE_STATE, opal_xive_set_queue_state, 4);
 	opal_register(OPAL_XIVE_GET_VP_STATE, opal_xive_get_vp_state, 2);
 }
-

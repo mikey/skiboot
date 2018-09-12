@@ -424,8 +424,9 @@ void imc_catalog_preload(void)
 	if (proc_chip_quirks & QUIRK_MAMBO_CALLOUTS)
 		return;
 
-	/* Enable only for power 9 */
-	if (proc_gen != proc_gen_p9)
+	/* XXX P10 */
+	/* Enable only for power 9/10 */
+	if (proc_gen >= proc_gen_p9)
 		return;
 
 	compress_buf = malloc(MAX_COMPRESSED_IMC_DTB_SIZE);
@@ -536,8 +537,8 @@ void imc_init(void)
 		goto imc_mambo;
 	}
 
-	/* Enable only for power 9 */
-	if (proc_gen != proc_gen_p9)
+	/* Enable only for power 9/10 */
+	if (proc_gen >= proc_gen_p9)
 		return;
 
 	if (!imc_xz)

@@ -499,7 +499,8 @@ void vas_init(void)
 	bool enabled;
 	struct dt_node *np;
 
-	if (proc_gen != proc_gen_p9)
+	/* XXX P10 */
+	if (proc_gen < proc_gen_p9)
 		return;
 
 	enabled = vas_nx_enabled();

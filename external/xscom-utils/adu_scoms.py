@@ -162,6 +162,7 @@ class GetSCom(object):
 			print("Error in scom read")
 			raise ValueError
 
+                # XXX P10, P9P
 		c_id = val >> 44
 		id = c_id & 0xff
                 if id == 0xef:

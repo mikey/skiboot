@@ -926,8 +926,9 @@ static int p8_i2c_check_initial_status(struct p8_i2c_master_port *port)
  */
 static bool occ_uses_master(struct p8_i2c_master *master)
 {
-	/* OCC uses I2CM Engines 1,2 and 3, only on POWER9 */
-	if (master->type == I2C_POWER8 && proc_gen == proc_gen_p9)
+	/* XXX P10 */
+	/* OCC uses I2CM Engines 1,2 and 3, only on POWER9/10 */
+	if (master->type == I2C_POWER8 && proc_gen >= proc_gen_p9)
 		return master->engine_id >= 1;
 
 	return false;

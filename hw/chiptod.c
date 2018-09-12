@@ -122,7 +122,8 @@
 static enum chiptod_type {
 	chiptod_unknown,
 	chiptod_p8,
-	chiptod_p9
+	chiptod_p9,
+	chiptod_p10,
 } chiptod_type;
 
 enum chiptod_chip_role {
@@ -606,13 +607,18 @@ static bool chiptod_to_tb(void)
 	 *
 	 * p7: 0b00001 || 3-bit core id
 	 * p8: 0b0001 || 4-bit core id
+	 * p9: 0b001 || 5-bit core id
+	 * p10: 0b00 || 5-bit core id
 	 */
 
 	if (xscom_readme(TOD_PIB_MASTER, &tval)) {
 		prerror("XSCOM error reading PIB_MASTER\n");
 		return false;
 	}
-	if (chiptod_type == chiptod_p9) {
+	if (chiptod_type == chiptod_p10) {
+		/* XXX P10 */
+		tvbits = (this_cpu()->pir >> 2) & 0x1f;
+	} else if (chiptod_type == chiptod_p9) {
 		tvbits = (this_cpu()->pir >> 2) & 0x1f;
 		tvbits |= 0x20;
 	} else if (chiptod_type == chiptod_p8) {
@@ -1639,6 +1645,8 @@ static bool chiptod_probe(void)
 				chiptod_type = chiptod_p8;
 			if (dt_node_is_compatible(np, "ibm,power9-chiptod"))
 				chiptod_type = chiptod_p9;
+			if (dt_node_is_compatible(np, "ibm,power10-chiptod"))
+				chiptod_type = chiptod_p10;
 		}
 
 		if (dt_has_node_property(np, "secondary", NULL))

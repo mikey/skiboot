@@ -301,6 +301,7 @@ static struct dt_node *add_xscom_node(uint64_t base, uint32_t hw_id,
 		addr = base | ((uint64_t)hw_id << PPC_BITLSHIFT(28));
 		break;
 	case proc_gen_p9:
+	case proc_gen_p10: /* XXX P10 */
 	default:
 		/* On P9 we need to put the chip ID in the natural powerbus
 		 * position.
@@ -332,6 +333,10 @@ static struct dt_node *add_xscom_node(uint64_t base, uint32_t hw_id,
 	case proc_gen_p9:
 		dt_add_property_strings(node, "compatible",
 					"ibm,xscom", "ibm,power9-xscom");
+		break;
+	case proc_gen_p10:
+		dt_add_property_strings(node, "compatible",
+					"ibm,xscom", "ibm,power10-xscom");
 		break;
 	default:
 		dt_add_property_strings(node, "compatible", "ibm,xscom");
@@ -421,6 +426,7 @@ static void add_psihb_node(struct dt_node *np)
 		psi_slen = 0x100;
 		psi_comp = "ibm,power9-psihb-x";
 		break;
+	case proc_gen_p10: /* XXX: P10 */
 	default:
 		psi_comp = NULL;
 	}
@@ -726,6 +732,9 @@ static void add_chiptod_node(unsigned int chip_id, int flags)
 	case proc_gen_p9:
 		compat_str = "ibm,power9-chiptod";
 		break;
+	case proc_gen_p10:
+		compat_str = "ibm,power10-chiptod";
+		break;
 	default:
 		return;
 	}
@@ -867,6 +876,7 @@ static void add_nx_node(u32 gcid)
 		/* POWER9 NX is not software compatible with P8 NX */
 		dt_add_property_strings(nx, "compatible", "ibm,power9-nx");
 		break;
+	case proc_gen_p10: /* XXX P10 */
 	default:
 		return;
 	}
@@ -906,7 +916,7 @@ static void add_nmmu(void)
 	struct dt_node *xscom, *nmmu;
 
 	/* Nest MMU only exists on POWER9 */
-	if (proc_gen != proc_gen_p9)
+	if (proc_gen < proc_gen_p9)
 		return;
 
 	dt_for_each_compatible(dt_root, xscom, "ibm,xscom") {

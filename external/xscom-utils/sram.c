@@ -28,6 +28,7 @@
 #define PVR_TYPE_P8NVL  0x004c /* Naples */
 #define PVR_TYPE_P9     0x004e
 #define PVR_TYPE_P9P    0x004f /* Axone */
+/* XXX P10 */
 
 #ifdef __powerpc__
 static uint64_t get_xscom_base(void)
