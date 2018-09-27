@@ -630,7 +630,7 @@ static int64_t opal_imc_counters_init(uint32_t type, uint64_t addr, uint64_t cpu
 		 * pdbar in specific scom ports. port_id are in
 		 * pdbar_scom_index[] and htm_scom_index[].
 		 */
-		phys_core_id = cpu_get_core_index(c);
+		phys_core_id = pir_to_core_id(c->pir);
 		port_id = phys_core_id % 4;
 
 		if (proc_chip_quirks & QUIRK_MAMBO_CALLOUTS)
@@ -750,7 +750,7 @@ static int64_t opal_imc_counters_start(uint32_t type, uint64_t cpu_pir)
 		 * Core IMC hardware mandates setting of htm_mode in specific
 		 * scom ports (port_id are in htm_scom_index[])
 		 */
-		phys_core_id = cpu_get_core_index(c);
+		phys_core_id = pir_to_core_id(c->pir);
 		port_id = phys_core_id % 4;
 
 		if (proc_chip_quirks & QUIRK_MAMBO_CALLOUTS)
@@ -811,7 +811,7 @@ static int64_t opal_imc_counters_stop(uint32_t type, uint64_t cpu_pir)
 		 * Core IMC hardware mandates setting of htm_mode in specific
 		 * scom ports (port_id are in htm_scom_index[])
 		 */
-		phys_core_id = cpu_get_core_index(c);
+		phys_core_id = pir_to_core_id(c->pir);
 		port_id = phys_core_id % 4;
 
 		if (proc_chip_quirks & QUIRK_MAMBO_CALLOUTS)
