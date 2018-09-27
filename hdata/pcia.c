@@ -103,7 +103,7 @@ static struct dt_node *add_core_node(struct dt_node *cpus,
 				     const struct sppcia_core_unique *id,
 				     bool okay)
 {
-	const struct sppcia_cpu_thread *t;
+	const struct sppcia_cpu_thread *t, *t0;
 	const struct sppcia_cpu_timebase *timebase;
 	const struct sppcia_cpu_cache *cache;
 	const struct sppcia_cpu_attr *attr;
@@ -172,12 +172,27 @@ static struct dt_node *add_core_node(struct dt_node *cpus,
 	/* Build ibm,ppc-interrupt-server#s with all threads */
 	for (i = 0; i < threads; i++) {
 		t = find_tada(pcia, i);
-		if (!t) {
-			threads = i;
-			break;
+		if (i == 0)
+			t0 = t;
+		if (t) {
+			iserv[i] = t->pir;
+		} else {
+			if (i > 0 && i < cpu_thread_count) {
+				prerror("CORE[%i]: HDAT TADA bug for"
+					" thread %d, working around"
+					" using 0x%04x...\n",
+					pcia_index(pcia),  i, t0->pir + i);
+				iserv[i] = t0->pir + i;
+			} else {
+				prerror("CORE[%i]: Failed to find TADA for"
+					" thread %d\n",
+					pcia_index(pcia),  i);
+				threads = i;
+				break;
+			}
 		}
-
-		iserv[i] = t->pir;
+		printf("CORE[%i]: Thread %d PIR 0x%04x\n",
+		       pcia_index(pcia), i, iserv[i]);
 	}
 
 	dt_add_property(cpu, "ibm,ppc-interrupt-server#s", iserv, 4 * threads);
