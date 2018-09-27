@@ -550,7 +550,7 @@ static int p9_sreset_thread(struct cpu_thread *cpu)
 
 int dctl_set_special_wakeup(struct cpu_thread *t)
 {
-	struct cpu_thread *c = t->primary;
+	struct cpu_thread *c = t->ec_primary;
 	int rc = OPAL_SUCCESS;
 
 	if (proc_gen != proc_gen_p9 && proc_gen != proc_gen_p8)
@@ -572,7 +572,7 @@ int dctl_set_special_wakeup(struct cpu_thread *t)
 
 int dctl_clear_special_wakeup(struct cpu_thread *t)
 {
-	struct cpu_thread *c = t->primary;
+	struct cpu_thread *c = t->ec_primary;
 	int rc = OPAL_SUCCESS;
 
 	if (proc_gen != proc_gen_p9 && proc_gen != proc_gen_p8)
@@ -597,7 +597,7 @@ out:
 
 int dctl_core_is_gated(struct cpu_thread *t)
 {
-	struct cpu_thread *c = t->primary;
+	struct cpu_thread *c = t->ec_primary;
 	uint32_t chip_id = pir_to_chip_id(c->pir);
 	uint32_t core_id = pir_to_core_id(c->pir);
 	uint32_t sshhyp_addr;
@@ -620,7 +620,7 @@ int dctl_core_is_gated(struct cpu_thread *t)
 
 static int dctl_stop(struct cpu_thread *t)
 {
-	struct cpu_thread *c = t->primary;
+	struct cpu_thread *c = t->ec_primary;
 	int rc;
 
 	if (proc_gen != proc_gen_p9 && proc_gen != proc_gen_p8)
@@ -644,7 +644,7 @@ static int dctl_stop(struct cpu_thread *t)
 
 static int dctl_cont(struct cpu_thread *t)
 {
-	struct cpu_thread *c = t->primary;
+	struct cpu_thread *c = t->ec_primary;
 	int rc;
 
 	if (proc_gen != proc_gen_p9)
@@ -671,7 +671,7 @@ static int dctl_cont(struct cpu_thread *t)
  */
 static int dctl_sreset(struct cpu_thread *t)
 {
-	struct cpu_thread *c = t->primary;
+	struct cpu_thread *c = t->ec_primary;
 	int rc;
 
 	if (proc_gen != proc_gen_p9 && proc_gen != proc_gen_p8)
