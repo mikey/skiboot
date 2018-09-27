@@ -236,7 +236,7 @@ static void cleanup_cpu_state(void)
 	struct cpu_thread *cpu = this_cpu();
 
 	/* Per core cleanup */
-	if (cpu_is_thread0(cpu)) {
+	if (cpu_is_thread0(cpu) | cpu_is_core_chiplet_primary(cpu)) {
 		/* Shared SPRs whacked back to normal */
 
 		/* XXX Update the SLW copies ! Also dbl check HIDs etc... */

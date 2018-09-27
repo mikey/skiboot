@@ -123,6 +123,9 @@
 
 /*
  * Additional useful definitions for P9
+ *
+ * Note: In all of these, the core numbering is the *small* core
+ *       number.
  */
 
 /* An EQ is a quad (also named an EP) */
