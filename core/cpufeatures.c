@@ -716,6 +716,16 @@ static const struct cpu_feature cpu_features_table[] = {
 	NULL, },
 
 	/*
+	 * Enable matrix multiply accumulate.
+	 */
+	{ "matrix-multiply-accumulate",
+	CPU_P10,
+	ISA_V3_1, USABLE_PR,
+	HV_CUSTOM, OS_CUSTOM,
+	-1, -1, 49,
+	NULL, },
+
+	/*
 	 * Enable prefix instructions. Toolchains assume this is
 	 * enabled for when compiling for ISA 3.1.
 	 */
