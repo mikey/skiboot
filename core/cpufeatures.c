@@ -722,8 +722,8 @@ static const struct cpu_feature cpu_features_table[] = {
 	{ "prefix-instructions",
 	CPU_P10,
 	ISA_V3_1, USABLE_HV|USABLE_OS|USABLE_PR,
-	HV_CUSTOM, OS_CUSTOM,
-	-1, -1, -1,
+	HV_HFSCR, OS_FSCR,
+	13, 13, -1,
 	NULL, },
 
 	/*
